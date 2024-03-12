@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: security-study
+  security:
+    user:
+      name: user
+      password: init123#
