@@ -1,5 +1,6 @@
 package org.example.securitystudy.config;
 
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,11 +29,27 @@ public class SecurityConfig {
                             response.sendRedirect("/login");
                         })
                         .permitAll()
-                )
+                );
 
-        ;
+        http.logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login")
+                .addLogoutHandler((request, response, authentication) -> {
+                    HttpSession session = request.getSession();
+                    session.invalidate();
+                })
+                .logoutSuccessHandler((request, response, authentication) -> {
+                    log.info("Logout Success. authentication: {}", authentication.getName());
+                    response.sendRedirect("/login");
+                })
+                .deleteCookies("remember-me")
+                .permitAll()
+        );
 
-
+        http.rememberMe(rememberMe -> rememberMe
+                .rememberMeParameter("remember-me")
+                .tokenValiditySeconds(3600)
+        );
         return http.build();
     }
 
