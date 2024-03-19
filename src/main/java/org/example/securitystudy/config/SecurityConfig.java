@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Slf4j
@@ -19,7 +21,6 @@ public class SecurityConfig {
                 .formLogin(formLogin -> formLogin
                         .defaultSuccessUrl("/")
                         .failureUrl("/login")
-                        .loginProcessingUrl("/login_proc")
                         .successHandler((request, response, authentication) -> {
                             log.info("authentication: {}", authentication.getName());
                             response.sendRedirect("/");
@@ -46,10 +47,14 @@ public class SecurityConfig {
                 .permitAll()
         );
 
-        http.rememberMe(rememberMe -> rememberMe
-                .rememberMeParameter("remember-me")
-                .tokenValiditySeconds(3600)
+        http.sessionManagement(sessionManagement -> sessionManagement
+                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
+                .sessionFixation(SessionManagementConfigurer.SessionFixationConfigurer::none)
+                .maximumSessions(1)
+                .maxSessionsPreventsLogin(false)
+                .expiredUrl("/login")
         );
+
         return http.build();
     }
 
