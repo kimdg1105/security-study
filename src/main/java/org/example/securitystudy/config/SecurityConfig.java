@@ -1,9 +1,10 @@
 package org.example.securitystudy.config;
 
-import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
@@ -16,8 +17,27 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        AuthenticationManagerBuilder auth =
+                http.getSharedObject(AuthenticationManagerBuilder.class);
+
+        auth.inMemoryAuthentication()
+                .withUser("user").password("{noop}1111").roles("USER");
+        auth.inMemoryAuthentication()
+                .withUser("admin").password("{noop}1234").roles("ADMIN");
+
+        return auth.build();
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests.anyRequest().authenticated())
+        http.authorizeHttpRequests(authorizeHttpRequests ->
+                        authorizeHttpRequests.requestMatchers("/user").hasRole("USER")
+                                .requestMatchers("/admin").hasRole("ADMIN")
+                                .requestMatchers("/admin/pay").hasRole("ADMIN")
+                                .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SYS")
+                                .anyRequest().authenticated()
+                )
                 .formLogin(formLogin -> formLogin
                         .defaultSuccessUrl("/")
                         .failureUrl("/login")
@@ -32,20 +52,6 @@ public class SecurityConfig {
                         .permitAll()
                 );
 
-        http.logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login")
-                .addLogoutHandler((request, response, authentication) -> {
-                    HttpSession session = request.getSession();
-                    session.invalidate();
-                })
-                .logoutSuccessHandler((request, response, authentication) -> {
-                    log.info("Logout Success. authentication: {}", authentication.getName());
-                    response.sendRedirect("/login");
-                })
-                .deleteCookies("remember-me")
-                .permitAll()
-        );
 
         http.sessionManagement(sessionManagement -> sessionManagement
                 .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
