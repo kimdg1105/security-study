@@ -32,4 +32,9 @@ public class SecurityController {
     public String pay() {
         return "pay";
     }
+
+    @GetMapping("/login")
+    public String login() {
+        return "login";
+    }
 }

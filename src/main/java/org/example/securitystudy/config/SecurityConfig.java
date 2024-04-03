@@ -10,6 +10,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
 
 @Slf4j
 @Configuration
@@ -33,6 +36,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(authorizeHttpRequests ->
                         authorizeHttpRequests.requestMatchers("/user").hasRole("USER")
+                                .requestMatchers("/login").permitAll()
                                 .requestMatchers("/admin").hasRole("ADMIN")
                                 .requestMatchers("/admin/pay").hasRole("ADMIN")
                                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SYS")
@@ -40,18 +44,25 @@ public class SecurityConfig {
                 )
                 .formLogin(formLogin -> formLogin
                         .defaultSuccessUrl("/")
-                        .failureUrl("/login")
                         .successHandler((request, response, authentication) -> {
+                            RequestCache requestCache = new HttpSessionRequestCache();
+                            SavedRequest savedRequest = requestCache.getRequest(request, response);
+                            response.sendRedirect(savedRequest.getRedirectUrl());
+
                             log.info("authentication: {}", authentication.getName());
-                            response.sendRedirect("/");
-                        })
-                        .failureHandler((request, response, exception) -> {
-                            log.info("exception: {}", exception.getMessage());
-                            response.sendRedirect("/login");
                         })
                         .permitAll()
                 );
-
+        http.exceptionHandling(exceptionHandling -> exceptionHandling
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    log.info("accessDeniedException: {}", accessDeniedException.getMessage());
+                    response.sendRedirect("/denied");
+                })
+                .authenticationEntryPoint((request, response, authException) -> {
+                    log.info("authException: {}", authException.getMessage());
+                    response.sendRedirect("/login");
+                })
+        );
 
         http.sessionManagement(sessionManagement -> sessionManagement
                 .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
